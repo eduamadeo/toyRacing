@@ -14,8 +14,11 @@ UHoverComponent::UHoverComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
+	IsGrounded = false;
 	TraceLength = 40.0f;
-	HoverForce = 60000.0f;
+	HoverForce = 8000.0f;
+	DampingCoefficient = 400.0f;
+	CurrentLength = TraceLength;
 }
 
 
@@ -34,6 +37,9 @@ void UHoverComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	float PreviousLength = CurrentLength;
+	float SpringVelocity = 0.0f;
+
 	FVector Start = GetComponentLocation();
 	FVector End = GetComponentLocation() + (GetUpVector() * (-1) * TraceLength);
 	FHitResult TraceResult;
@@ -42,9 +48,16 @@ void UHoverComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, (uint8)0, 5.f);
 
 	if (HasColided) {
-		ParentComponent->AddForceAtLocation(TraceResult.ImpactNormal * FMath::Lerp(HoverForce, 0.0f, (TraceResult.Distance / TraceLength)), GetComponentLocation());
-		ParentComponent->SetLinearDamping(3.0f);
-		ParentComponent->SetAngularDamping(5.0f);
+		IsGrounded = true;
+		ImpactNormal = TraceResult.ImpactNormal;
+		CurrentLength = TraceResult.Distance;
+		SpringVelocity = (CurrentLength - PreviousLength) / DeltaTime;
+
+		ParentComponent->AddForceAtLocation(GetUpVector() * (-DampingCoefficient * SpringVelocity - HoverForce * (CurrentLength - TraceLength)), GetComponentLocation());
+	}
+	else 
+	{
+		IsGrounded = false;
 	}
 }
 

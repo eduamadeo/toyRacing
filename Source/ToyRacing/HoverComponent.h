@@ -22,8 +22,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
 		float HoverForce;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Suspension")
+		float DampingCoefficient;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Suspension")
+		bool IsGrounded;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UPrimitiveComponent* ParentComponent;
+
+	FVector ImpactNormal;
+	float CurrentLength;
 
 protected:
 	// Called when the game starts

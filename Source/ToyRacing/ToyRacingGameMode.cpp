@@ -3,9 +3,10 @@
 #include "ToyRacingGameMode.h"
 #include "RemoteControlCar.h"
 #include "ToyRacingHud.h"
+#include "MPTest.h"
 
 AToyRacingGameMode::AToyRacingGameMode()
 {
 	DefaultPawnClass = ARemoteControlCar::StaticClass();
-	//HUDClass = AToyRacingHud::StaticClass();
+	HUDClass = AToyRacingHud::StaticClass();
 }

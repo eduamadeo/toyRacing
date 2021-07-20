@@ -11,6 +11,7 @@
 #include "CanvasItem.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/Engine.h"
+#include "RemoteControlCar.h"
 
 #define LOCTEXT_NAMESPACE "VehicleHUD"
 
@@ -40,20 +41,17 @@ void AToyRacingHud::DrawHUD()
 	if (bWantHUD == true)
 	{
 		// Get our vehicle so we can check if we are in car. If we are we don't want onscreen HUD
-		AToyRacingPawn* Vehicle = Cast<AToyRacingPawn>(GetOwningPawn());
-		if ((Vehicle != nullptr) && (Vehicle->bInCarCameraActive == false))
+		ARemoteControlCar* Vehicle = Cast<ARemoteControlCar>(GetOwningPawn());
+		if ((Vehicle != nullptr))
 		{
 			FVector2D ScaleVec(HUDYRatio * 1.4f, HUDYRatio * 1.4f);
 
+			FText SpeedDisplayString = FText::Format(LOCTEXT("SpeedFormat", "{0}/3"), FText::AsNumber(Vehicle->Position));
+
 			// Speed
-			FCanvasTextItem SpeedTextItem(FVector2D(HUDXRatio * 805.f, HUDYRatio * 455), Vehicle->SpeedDisplayString, HUDFont, FLinearColor::White);
+			FCanvasTextItem SpeedTextItem(FVector2D(HUDXRatio * 805.f, HUDYRatio * 455), SpeedDisplayString, HUDFont, FLinearColor::White);
 			SpeedTextItem.Scale = ScaleVec;
 			Canvas->DrawItem(SpeedTextItem);
-
-			// Gear
-			FCanvasTextItem GearTextItem(FVector2D(HUDXRatio * 805.f, HUDYRatio * 500.f), Vehicle->GearDisplayString, HUDFont, Vehicle->bInReverseGear == false ? Vehicle->GearDisplayColor : Vehicle->GearDisplayReverseColor);
-			GearTextItem.Scale = ScaleVec;
-			Canvas->DrawItem(GearTextItem);
 		}
 	}
 }
