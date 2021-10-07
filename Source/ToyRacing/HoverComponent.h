@@ -32,6 +32,7 @@ public:
 		class UPrimitiveComponent* ParentComponent;
 
 	FVector ImpactNormal;
+	FVector ImpactPoint;
 	float CurrentLength;
 
 protected:

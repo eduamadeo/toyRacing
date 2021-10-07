@@ -21,6 +21,9 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyLapCompletion(int Position, int CurrentLap);
+
 public:
 
 	// constructor sets default values for this actor's properties

@@ -16,7 +16,7 @@ UHoverComponent::UHoverComponent()
 
 	IsGrounded = false;
 	TraceLength = 40.0f;
-	HoverForce = 8000.0f;
+	HoverForce = 2000.0f;
 	DampingCoefficient = 400.0f;
 	CurrentLength = TraceLength;
 }
@@ -45,11 +45,12 @@ void UHoverComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 	FHitResult TraceResult;
 	FCollisionQueryParams CollisionParams;
 	bool HasColided = GetWorld()->LineTraceSingleByChannel(TraceResult, Start, End, ECollisionChannel::ECC_Visibility, CollisionParams);
-	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, (uint8)0, 5.f);
+	//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, (uint8)0, 5.f);
 
 	if (HasColided) {
 		IsGrounded = true;
 		ImpactNormal = TraceResult.ImpactNormal;
+		ImpactPoint = TraceResult.ImpactPoint;
 		CurrentLength = TraceResult.Distance;
 		SpringVelocity = (CurrentLength - PreviousLength) / DeltaTime;
 

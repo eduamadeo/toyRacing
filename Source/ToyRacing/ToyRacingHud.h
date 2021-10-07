@@ -12,11 +12,20 @@ class AToyRacingHud : public AHUD
 public:
 	AToyRacingHud();
 
+	FTimerHandle CounterTimer;
+	int Counter;
+
 	/** Font used to render the vehicle info */
 	UPROPERTY()
 	UFont* HUDFont;
 
+	UTexture* HurricaneTexture;
+	UTexture* EletricTexture;
+	UTexture* MagnetTexture;
+
 	// Begin AHUD interface
 	virtual void DrawHUD() override;
 	// End AHUD interface
+
+	void ChangeCounter();
 };
