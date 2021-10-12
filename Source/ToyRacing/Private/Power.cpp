@@ -42,10 +42,16 @@ APower::APower()
 	}
 
 	static ConstructorHelpers::FObjectFinder<UMaterialInstanceConstant> BoxMaterialInstance(TEXT("MaterialInstanceConstant'/Game/Assets/box/Box_Mat_Inst.Box_Mat_Inst'"));
-	BoxMaterial = BoxMaterialInstance.Object;
+	if (BoxMaterialInstance.Succeeded())
+	{
+		BoxMaterial = BoxMaterialInstance.Object;
+	}
 
 	static ConstructorHelpers::FObjectFinder<UParticleSystem> DefaultExplosionEffect(TEXT("ParticleSystem'/Game/Assets/box/Box_Crash.Box_Crash'"));
-	ExplosionEffect = DefaultExplosionEffect.Object;
+	if (DefaultExplosionEffect.Succeeded())
+	{
+		ExplosionEffect = DefaultExplosionEffect.Object;
+	}
 
 	// Setup the audio component and allocate it a sound cue
 	static ConstructorHelpers::FObjectFinder<USoundCue> SoundCue(TEXT("SoundCue'/Game/Assets/Sounds/box_crash_Cue.box_crash_Cue'"));
