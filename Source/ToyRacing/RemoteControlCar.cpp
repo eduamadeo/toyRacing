@@ -208,8 +208,8 @@ ARemoteControlCar::ARemoteControlCar()
 	}
 
 	MaximumVelocity = 1500;
-	AccelationFactor = 3500;
-	SteerFactor = 15;
+	AccelationFactor = 2000;
+	SteerFactor = 7;
 	SidewaysTraction = 5;
 	AngularTraction = 0.05;
 	SteeringAngle = FRotator(0.0f, 0.0f, 0.0f);
@@ -658,21 +658,20 @@ void ARemoteControlCar::MoveForward(float Val)
 	{
 		if (AreAllSpringsGrounded())
 		{
-			FTransform WorldTransform = StaticMesh->GetBodyInstance()->GetUnrealWorldTransform_AssumesLocked();
-			FVector ForwardProjected = FVector::VectorPlaneProject(WorldTransform.GetUnitAxis(EAxis::X), HoverComp1->ImpactNormal);
+			FVector ForwardProjected = FVector::VectorPlaneProject(StaticMesh->GetForwardVector(), HoverComp1->ImpactNormal);
 			//UE_LOG(LogTemp, Warning, TEXT("%f %f %f - %f %f %f"), ForwardProjected.X, ForwardProjected.Y, ForwardProjected.Z, HoverComp1->ImpactNormal.X, HoverComp1->ImpactNormal.Y, HoverComp1->ImpactNormal.Z);
 			if (Val > 0.0f)
 			{
 				if (!IsMovingForward || StraightVelocityMagnitude < MaximumVelocity)
 				{
-					StaticMesh->GetBodyInstance()->AddForce(ForwardProjected * AccelationFactor * Val, false, true);
+					StaticMesh->AddForce(ForwardProjected * AccelationFactor * Val, NAME_None, true);
 				}
 			}
 			else if (Val < 0.0f)
 			{
 				if (IsMovingForward || StraightVelocityMagnitude < MaximumVelocity * 0.4f)
 				{
-					StaticMesh->GetBodyInstance()->AddForce(ForwardProjected * AccelationFactor * Val, false, true);
+					StaticMesh->AddForce(ForwardProjected * AccelationFactor * Val, NAME_None, true);
 				}
 			}
 		}
@@ -691,11 +690,11 @@ void ARemoteControlCar::MoveRight(float Val)
 			{
 				if (IsMovingForward)
 				{
-					StaticMesh->GetBodyInstance()->AddTorqueInRadians(FVector(0.0f, 0.0f, SteerFactor * Val), false, true);
+					StaticMesh->AddTorqueInRadians(FVector(0.0f, 0.0f, SteerFactor * Val), NAME_None, true);
 				}
 				else
 				{
-					StaticMesh->GetBodyInstance()->AddTorqueInRadians(FVector(0.0f, 0.0f, -SteerFactor * Val), false, true);
+					StaticMesh->AddTorqueInRadians(FVector(0.0f, 0.0f, -SteerFactor * Val), NAME_None, true);
 				}
 				SteeringAngle = Slerp(LocalTransform.Rotator(), FRotator(0.0f, Val * 30.0f, 0.0f), 0.1);
 			}
