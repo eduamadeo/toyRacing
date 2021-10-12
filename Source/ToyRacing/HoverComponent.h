@@ -35,6 +35,10 @@ public:
 	FVector ImpactPoint;
 	float CurrentLength;
 
+private:
+	// The delegate used to register substepped physics
+	FCalculateCustomPhysics CalculateCustomPhysics;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -42,6 +46,9 @@ protected:
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	// The function used to apply substepped physics
+	virtual void SubstepTick(float DeltaTime, FBodyInstance* BodyInstance);
 
 	void InitComponent(UStaticMeshComponent* HoverCarMesh);
 

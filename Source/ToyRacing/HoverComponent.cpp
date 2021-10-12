@@ -27,7 +27,7 @@ void UHoverComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
+	CalculateCustomPhysics.BindUObject(this, &UHoverComponent::SubstepTick);
 	
 }
 
@@ -37,15 +37,25 @@ void UHoverComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	if (ParentComponent->GetBodyInstance() != NULL)
+	{
+		ParentComponent->GetBodyInstance()->AddCustomPhysics(CalculateCustomPhysics);
+	}
+}
+
+void UHoverComponent::SubstepTick(float DeltaTime, FBodyInstance* BodyInstance)
+{
 	float PreviousLength = CurrentLength;
 	float SpringVelocity = 0.0f;
 
-	FVector Start = GetComponentLocation();
-	FVector End = GetComponentLocation() + (GetUpVector() * (-1) * TraceLength);
+	const auto ComponentWorldTransform = GetRelativeTransform() * BodyInstance->GetUnrealWorldTransform();
+	const auto ComponentLocation = ComponentWorldTransform.GetLocation();
+
+	FVector Start = ComponentLocation;
+	FVector End = ComponentLocation + (GetUpVector() * (-1) * TraceLength);
 	FHitResult TraceResult;
 	FCollisionQueryParams CollisionParams;
 	bool HasColided = GetWorld()->LineTraceSingleByChannel(TraceResult, Start, End, ECollisionChannel::ECC_Visibility, CollisionParams);
-	//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, (uint8)0, 5.f);
 
 	if (HasColided) {
 		IsGrounded = true;
@@ -54,9 +64,9 @@ void UHoverComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActor
 		CurrentLength = TraceResult.Distance;
 		SpringVelocity = (CurrentLength - PreviousLength) / DeltaTime;
 
-		ParentComponent->AddForceAtLocation(GetUpVector() * (-DampingCoefficient * SpringVelocity - HoverForce * (CurrentLength - TraceLength)), GetComponentLocation());
+		ParentComponent->GetBodyInstance()->AddForceAtPosition(GetUpVector() * (-DampingCoefficient * SpringVelocity - HoverForce * (CurrentLength - TraceLength)), ComponentLocation, false);
 	}
-	else 
+	else
 	{
 		IsGrounded = false;
 	}

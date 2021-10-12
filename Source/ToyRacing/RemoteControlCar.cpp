@@ -208,8 +208,8 @@ ARemoteControlCar::ARemoteControlCar()
 	}
 
 	MaximumVelocity = 1500;
-	AccelationFactor = 2000;
-	SteerFactor = 10;
+	AccelationFactor = 3500;
+	SteerFactor = 15;
 	SidewaysTraction = 5;
 	AngularTraction = 0.05;
 	SteeringAngle = FRotator(0.0f, 0.0f, 0.0f);
@@ -242,6 +242,8 @@ void ARemoteControlCar::BeginPlay()
 	UpdateFunctionVector.BindDynamic(this, &ARemoteControlCar::UpdateTimelineVectorComp);
 	UpdateFunctionFloat.BindDynamic(this, &ARemoteControlCar::UpdateTimelineFloatComp);
 
+	OnCalculateCustomPhysics.BindUObject(this, &ARemoteControlCar::CustomPhysics);
+
 	//If we have a float curve, bind it's graph to our update function
 	if (CarTimelineVectorCurve)
 	{
@@ -268,24 +270,9 @@ void ARemoteControlCar::Tick(float DeltaTime)
 
 	DeltaSeconds = DeltaTime;
 
-	//UE_LOG(LogTemp, Warning, TEXT("%f"), FVector::DotProduct(StaticMesh->GetPhysicsLinearVelocity(), StaticMesh->GetRightVector()));
-
-	if (AreAllSpringsGrounded())
+	if (StaticMesh->GetBodyInstance() != NULL)
 	{
-		StaticMesh->SetAngularDamping(0.0f);
-		FVector ProjectedForward = StaticMesh->GetForwardVector();
-		StraightVelocity = ProjectedForward * FVector::DotProduct(StaticMesh->GetPhysicsLinearVelocity(), ProjectedForward);
-		StraightVelocityMagnitude = StraightVelocity.Size();
-		IsMovingForward = FVector::DotProduct(ProjectedForward, StraightVelocity.GetSafeNormal()) > 0.0f;
-		Traction();
-	}
-	else if (IsAnySpringGrounded())
-	{
-		StaticMesh->SetAngularDamping(0.0f);
-	}
-	else
-	{
-		StaticMesh->SetAngularDamping(10.0f);
+		StaticMesh->GetBodyInstance()->AddCustomPhysics(OnCalculateCustomPhysics);
 	}
 
 	MoveReplication(DeltaTime);
@@ -334,6 +321,33 @@ void ARemoteControlCar::Tick(float DeltaTime)
 			MaterialChanged = true;
 		}
 	}
+}
+
+void ARemoteControlCar::PhysicsTick_Implementation(float SubstepDeltaTime)
+{
+	if (AreAllSpringsGrounded())
+	{
+		FTransform WorldTransform = StaticMesh->GetBodyInstance()->GetUnrealWorldTransform_AssumesLocked();
+		StaticMesh->SetAngularDamping(0.0f);
+		FVector ProjectedForward = WorldTransform.GetUnitAxis(EAxis::X);
+		StraightVelocity = ProjectedForward * FVector::DotProduct(StaticMesh->GetPhysicsLinearVelocity(), ProjectedForward);
+		StraightVelocityMagnitude = StraightVelocity.Size();
+		IsMovingForward = FVector::DotProduct(ProjectedForward, StraightVelocity.GetSafeNormal()) > 0.0f;
+		Traction();
+	}
+	else if (IsAnySpringGrounded())
+	{
+		StaticMesh->SetAngularDamping(0.0f);
+	}
+	else
+	{
+		StaticMesh->SetAngularDamping(10.0f);
+	}
+}
+
+void ARemoteControlCar::CustomPhysics(float DeltaTime, FBodyInstance* BodyInstance)
+{
+	PhysicsTick(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -563,18 +577,36 @@ void ARemoteControlCar::ServerDefinePositions_Implementation()
 	TArray<AActor*> Actors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARemoteControlCar::StaticClass(), Actors);
 
+	bool ShouldRun = true;
 	for (AActor* Actor : Actors)
 	{
 		ARemoteControlCar* RemoteControlCar = Cast<ARemoteControlCar>(Actor);
-		RemoteControlCars.Push(RemoteControlCar);
+		if (RemoteControlCar != nullptr)
+		{
+			if (!RemoteControlCar->HasEnded)
+			{
+				RemoteControlCars.Push(RemoteControlCar);
+			}
+			else
+			{
+				Counter++;
+			}
+		}
+		else
+		{
+			ShouldRun = false;
+		}
 	}
 
-	RemoteControlCars.Sort();
-
-	for (ARemoteControlCar* RCar : RemoteControlCars)
+	if (ShouldRun)
 	{
-		RCar->Position = Counter;
-		Counter++;
+		RemoteControlCars.Sort();
+
+		for (ARemoteControlCar* RCar : RemoteControlCars)
+		{
+			RCar->Position = Counter;
+			Counter++;
+		}
 	}
 }
 
@@ -626,20 +658,21 @@ void ARemoteControlCar::MoveForward(float Val)
 	{
 		if (AreAllSpringsGrounded())
 		{
-			FVector ForwardProjected = FVector::VectorPlaneProject(StaticMesh->GetForwardVector(), HoverComp1->ImpactNormal);
+			FTransform WorldTransform = StaticMesh->GetBodyInstance()->GetUnrealWorldTransform_AssumesLocked();
+			FVector ForwardProjected = FVector::VectorPlaneProject(WorldTransform.GetUnitAxis(EAxis::X), HoverComp1->ImpactNormal);
 			//UE_LOG(LogTemp, Warning, TEXT("%f %f %f - %f %f %f"), ForwardProjected.X, ForwardProjected.Y, ForwardProjected.Z, HoverComp1->ImpactNormal.X, HoverComp1->ImpactNormal.Y, HoverComp1->ImpactNormal.Z);
 			if (Val > 0.0f)
 			{
 				if (!IsMovingForward || StraightVelocityMagnitude < MaximumVelocity)
 				{
-					StaticMesh->AddForce(ForwardProjected * AccelationFactor * Val, NAME_None, true);
+					StaticMesh->GetBodyInstance()->AddForce(ForwardProjected * AccelationFactor * Val, false, true);
 				}
 			}
 			else if (Val < 0.0f)
 			{
 				if (IsMovingForward || StraightVelocityMagnitude < MaximumVelocity * 0.4f)
 				{
-					StaticMesh->AddForce(ForwardProjected * AccelationFactor * Val, NAME_None, true);
+					StaticMesh->GetBodyInstance()->AddForce(ForwardProjected * AccelationFactor * Val, false, true);
 				}
 			}
 		}
@@ -656,7 +689,14 @@ void ARemoteControlCar::MoveRight(float Val)
 			FTransform LocalTransform = Mesh->GetSocketTransform(TEXT("SM_Veh_Convertable_Wheel_fr"), RTS_Component);
 			if (!FMath::IsNearlyZero(Val, 0.01f))
 			{
-				StaticMesh->AddTorque(FVector(0.0f, 0.0f, SteerFactor * Val), NAME_None, true);
+				if (IsMovingForward)
+				{
+					StaticMesh->GetBodyInstance()->AddTorqueInRadians(FVector(0.0f, 0.0f, SteerFactor * Val), false, true);
+				}
+				else
+				{
+					StaticMesh->GetBodyInstance()->AddTorqueInRadians(FVector(0.0f, 0.0f, -SteerFactor * Val), false, true);
+				}
 				SteeringAngle = Slerp(LocalTransform.Rotator(), FRotator(0.0f, Val * 30.0f, 0.0f), 0.1);
 			}
 			else
@@ -669,22 +709,20 @@ void ARemoteControlCar::MoveRight(float Val)
 
 void ARemoteControlCar::Traction()
 {
-	//StaticMesh->AddForce(StaticMesh->GetRightVector() * FVector::DotProduct(StaticMesh->GetPhysicsLinearVelocity(), StaticMesh->GetRightVector() * -300));
-
 	// Sideways traction
 	FVector ContrarySidewaysVelocity = -StaticMesh->GetPhysicsLinearVelocity().ProjectOnToNormal(this->GetActorRightVector());
 	if (ContrarySidewaysVelocity.SizeSquared() > 0.0f)
 	{
-		StaticMesh->AddForce(ContrarySidewaysVelocity * SidewaysTraction, NAME_None, true);
+		StaticMesh->GetBodyInstance()->AddForce(ContrarySidewaysVelocity * SidewaysTraction, false, true);
 	}
 
 	// Angular traction
-	StaticMesh->AddTorque(-FVector(0.0f, 0.0f, StaticMesh->GetPhysicsAngularVelocity().Z) * AngularTraction, NAME_None, true);
+	StaticMesh->GetBodyInstance()->AddTorqueInRadians(-FVector(0.0f, 0.0f, StaticMesh->GetPhysicsAngularVelocity().Z) * AngularTraction, false, true);
 
 	// Wheels traction
 	const float WHEELS_ROLLING_RESISTANCE_COEFFICIENT = 0.2f;
 	FVector WheelsRollingResistanceForce = -(StraightVelocity * WHEELS_ROLLING_RESISTANCE_COEFFICIENT);
-	StaticMesh->AddForce(WheelsRollingResistanceForce, NAME_None, true);
+	StaticMesh->GetBodyInstance()->AddForce(WheelsRollingResistanceForce, false, true);
 }
 
 void ARemoteControlCar::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)

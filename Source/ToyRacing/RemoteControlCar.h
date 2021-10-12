@@ -245,6 +245,15 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	// Event called every physics tick and sub-step.
+	UFUNCTION(BlueprintNativeEvent)
+		void PhysicsTick(float SubstepDeltaTime);
+	virtual void PhysicsTick_Implementation(float SubstepDeltaTime);
+
+	// Custom physics Delegate
+	FCalculateCustomPhysics OnCalculateCustomPhysics;
+	void CustomPhysics(float DeltaTime, FBodyInstance* BodyInstance);
+
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
